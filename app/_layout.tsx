@@ -1,29 +1,56 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
 
-import { useColorScheme } from '@/hooks/useColorScheme';
+
+// _layout.tsx
+
+
+// import React from "react";
+// import { Slot } from "expo-router";
+// import Toast from "react-native-toast-message";
+// import { CartProvider } from "../context/CartContext";
+// import { AuthProvider } from "../context/Auth";
+// import { LocationProvider } from "@/context/locationContent";
+// import { Provider } from "react-redux";
+// import reduxSave from "../reduxstore/saveaddstore";
+
+
+// export default function RootLayout() {
+//   return (
+//     <Provider store={reduxSave}>
+//       <AuthProvider>
+//         <LocationProvider>
+//           <CartProvider>
+//             <Slot />
+//             <Toast />
+//           </CartProvider>
+//         </LocationProvider>
+//       </AuthProvider>
+//     </Provider>
+//   );
+// }
+
+import React from "react";
+import { Slot } from "expo-router";
+import Toast from "react-native-toast-message";
+import { CartProvider } from "../context/CartContext";
+import { AuthProvider } from "../context/Auth";
+import { LocationProvider } from "@/context/locationContent";
+import { Provider } from "react-redux";
+import { store, persistor } from "../reduxstore/saveaddstore"; // updated store
+import { PersistGate } from "redux-persist/integration/react";
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
-
-  if (!loaded) {
-    // Async font loading only occurs in development.
-    return null;
-  }
-
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <Provider store={store}>
+      <PersistGate loading={null} persistor={persistor}>
+        <AuthProvider>
+          <LocationProvider>
+            <CartProvider>
+              <Slot />
+              <Toast />
+            </CartProvider>
+          </LocationProvider>
+        </AuthProvider>
+      </PersistGate>
+    </Provider>
   );
 }
