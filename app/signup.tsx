@@ -335,7 +335,7 @@ export default function SignupScreen() {
     try {
       setLoading(true);
 
-      const response = await fetch("http://10.108.21.53:9094/customers/profile", {
+      const response = await fetch("http://192.168.0.102:9094/customers/profile", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

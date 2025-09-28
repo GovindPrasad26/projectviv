@@ -166,6 +166,7 @@ export default function Header() {
         address: fullAddress,
         lat: loc.coords.latitude,
         lng: loc.coords.longitude,
+        saved:false
       });
     } catch (err) {
       console.log(err);

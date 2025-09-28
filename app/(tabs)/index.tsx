@@ -43,7 +43,7 @@ export default function HomePage() {
     setLoading(true);
     try {
       const response = await fetch(
-        `http://10.108.21.53:9092/restaurants/nearby?longitude=${lng}&latitude=${lat}`
+        `http://192.168.0.102:9092/restaurants/nearby?longitude=${lng}&latitude=${lat}`
       );
       const data = await response.json();
       dispatch(setRestaurants(data));

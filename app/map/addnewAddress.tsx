@@ -1,99 +1,424 @@
+// import React, { useEffect, useState, useRef, useCallback, useContext } from "react";
+// import {
+//   View,
+//   Text,
+//   TextInput,
+//   ScrollView,
+//   TouchableOpacity,
+//   Image,
+//   ActivityIndicator,
+//   Alert,
+//   StyleSheet,
+//   Dimensions,
+// } from "react-native";
+// import MapView, { Region } from "react-native-maps";
+// import axios from "axios";
+// import debounce from "lodash.debounce";
+// import { useRouter, useLocalSearchParams } from "expo-router";
+// import { AuthContext } from "@/context/Auth";
+
+// const { width, height } = Dimensions.get("window");
+// const GOOGLE_API_KEY = "AIzaSyDbhDt1_GZG_bW-3f5s6cfSTY2CepE4GEg";
+
+// export default function AddNewAddress() {
+//   const mapRef = useRef<MapView>(null);
+//   const router = useRouter();
+//   const params = useLocalSearchParams();
+//   const { user } = useContext(AuthContext);
+
+//   const [region, setRegion] = useState<Region | null>(null);
+//   const [currentAddress, setCurrentAddress] = useState("");
+//   const [searchQuery, setSearchQuery] = useState("");
+//   const [loading, setLoading] = useState(true);
+
+//   const [houseFlatBlock, setHouseFlatBlock] = useState("");
+//   const [apartmentRoadArea, setApartmentRoadArea] = useState("");
+//   const [floor, setFloor] = useState("");
+//   const [label, setLabel] = useState("");
+//   const [receiverPhone, setReceiverPhone] = useState("");
+//   const [customLabel, setCustomLabel] = useState("");
+//   const [showForm, setShowForm] = useState(false);
+//   const [mapLocked, setMapLocked] = useState(false);
+
+//   const isEditMode = Array.isArray(params.edit)
+//     ? params.edit[0] === "true"
+//     : params.edit === "true";
+
+//   const getParamString = (param: string | string[] | undefined) =>
+//     Array.isArray(param) ? param[0] : param || "";
+
+//   // Load initial data once
+//   useEffect(() => {
+//     const paramHouseFlatBlock = getParamString(params.houseFlatBlock);
+//     const paramFloor = getParamString(params.floor);
+//     const paramApartmentRoadArea = getParamString(params.apartmentRoadArea);
+//     const paramLabel = getParamString(params.label);
+//     const paramCustomLabel = getParamString(params.customAddressLabel);
+//     const paramPhone = getParamString(params.phone);
+//     const paramLat = getParamString(params.lat);
+//     const paramLng = getParamString(params.lng);
+//     const paramAddress = getParamString(params.address);
+//     const paramFullAddress = getParamString(params.fullAddress);
+
+//     setHouseFlatBlock(paramHouseFlatBlock);
+//     setFloor(paramFloor);
+//     setApartmentRoadArea(paramApartmentRoadArea);
+
+//     // ✅ Prefill phone number if available
+//     if (paramPhone) setReceiverPhone(paramPhone);
+
+//     if (["Home", "Work"].includes(paramLabel)) {
+//       setLabel(paramLabel);
+//     } else if (paramLabel === "Others" || paramCustomLabel) {
+//       setLabel("Others");
+//       setCustomLabel(paramCustomLabel || "");
+//     }
+
+//     if (paramLat && paramLng) {
+//       setRegion({
+//         latitude: parseFloat(paramLat),
+//         longitude: parseFloat(paramLng),
+//         latitudeDelta: 0.01,
+//         longitudeDelta: 0.01,
+//       });
+//     }
+
+//     if (paramAddress || paramFullAddress) {
+//       setCurrentAddress(paramAddress || paramFullAddress || "");
+//       setSearchQuery(paramAddress || paramFullAddress || "");
+//     }
+
+//     setShowForm(true);
+//     setMapLocked(isEditMode);
+//     setLoading(false);
+//   }, []);
+
+//   // Fetch address from lat/lon
+//   const fetchAddressFromCoords = useCallback(
+//     debounce(async (lat: number, lng: number) => {
+//       try {
+//         const res = await axios.get(
+//           `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_API_KEY}`
+//         );
+//         const addr = res.data?.results?.[0]?.formatted_address;
+//         if (addr) setCurrentAddress(addr);
+//       } catch (e) {
+//         console.log("Geocode error:", e);
+//       }
+//     }, 500),
+//     []
+//   );
+
+//   const handleRegionChangeComplete = (newRegion: Region) => {
+//     if (!mapLocked) {
+//       setRegion(newRegion);
+//       fetchAddressFromCoords(newRegion.latitude, newRegion.longitude);
+//     }
+//   };
+
+//   const handleSaveOrUpdateAddress = async () => {
+//     if (!houseFlatBlock || !apartmentRoadArea) {
+//       Alert.alert("Missing Details", "Please fill all mandatory fields!");
+//       return;
+//     }
+//     if (!receiverPhone || !/^[6-9]\d{9}$/.test(receiverPhone)) {
+//       Alert.alert("Invalid Phone", "Enter a valid 10-digit phone number.");
+//       return;
+//     }
+//     if (label === "Others" && !customLabel) {
+//       Alert.alert("Missing Details", "Please enter a label name!");
+//       return;
+//     }
+//     if (!user) {
+//       Alert.alert("Login Required", "You must be logged in!");
+//       return;
+//     }
+//     if (!region) {
+//       Alert.alert("Error", "Location not detected. Please try again.");
+//       return;
+//     }
+
+//     const addressData = {
+//       fullAddress: currentAddress,
+//       houseFlatBlock,
+//       floor,
+//       apartmentRoadArea,
+//       latitude: region.latitude,
+//       longitude: region.longitude,
+//       addressType: label === "Others" ? "OTHER" : label.toUpperCase(),
+//       customAddressLabel: label === "Others" ? customLabel : "",
+//       phone: receiverPhone,
+//     };
+
+//     try {
+//       let res;
+//       if (isEditMode && params.addressId) {
+//         // Update existing address
+//         res = await axios.put(
+//           `http://192.168.0.106:9094/customers/address/${getParamString(params.addressId)}`,
+//           addressData,
+//           { headers: { Authorization: `Bearer ${user.token}` } }
+//         );
+//         if (res.status >= 200 && res.status < 300) {
+//           Alert.alert("✅ Success", "Address updated successfully!", [
+//             { text: "OK", onPress: () => router.push("/") },
+//           ]);
+//         }
+//       } else {
+//         // Save new address
+//         res = await axios.post(
+//           "http://192.168.0.106:9094/customers/address",
+//           addressData,
+//           { headers: { Authorization: `Bearer ${user.token}` } }
+//         );
+//         if (res.status >= 200 && res.status < 300) {
+//           Alert.alert("✅ Success", "Address saved successfully!", [
+//             { text: "OK", onPress: () => router.push("/") },
+//           ]);
+//         }
+//       }
+//     } catch (err) {
+//       console.log("Save Address Error:", err);
+//       Alert.alert("Error", "Something went wrong! Please try again later.");
+//     }
+//   };
+
+//   if (loading || !region) {
+//     return (
+//       <View style={styles.loader}>
+//         <ActivityIndicator size="large" color="purple" />
+//         <Text>Fetching location...</Text>
+//       </View>
+//     );
+//   }
+
+//   return (
+//     <View style={styles.container}>
+//       {/* Map */}
+//       <View style={[styles.mapContainer, showForm && { height: height * 0.4 }]}>
+//         <MapView
+//           ref={mapRef}
+//           style={StyleSheet.absoluteFillObject}
+//           region={region}
+//           scrollEnabled={!mapLocked}
+//           zoomEnabled={!mapLocked}
+//           onRegionChangeComplete={handleRegionChangeComplete}
+//           showsUserLocation
+//         />
+//         {!mapLocked && (
+//           <View style={styles.markerFixed}>
+//             <Image
+//               source={{
+//                 uri: "https://maps.gstatic.com/mapfiles/api-3/images/spotlight-poi2_hdpi.png",
+//               }}
+//               style={{ width: 40, height: 40 }}
+//               resizeMode="contain"
+//             />
+//           </View>
+//         )}
+//       </View>
+
+//       {/* Form */}
+//       <ScrollView style={styles.formContainer} contentContainerStyle={{ paddingBottom: 40 }}>
+//         <Text style={styles.locationTitle}>{currentAddress}</Text>
+
+//         <TextInput
+//           placeholder="House / Flat / Block No.*"
+//           value={houseFlatBlock}
+//           onChangeText={setHouseFlatBlock}
+//           style={styles.input}
+//         />
+//         <TextInput placeholder="Floor" value={floor} onChangeText={setFloor} style={styles.input} />
+//         <TextInput
+//           placeholder="Apartment / Road / Area*"
+//           value={apartmentRoadArea}
+//           onChangeText={setApartmentRoadArea}
+//           style={styles.input}
+//         />
+
+//         {/* Save As */}
+//         <View style={styles.saveAsContainer}>
+//           {["Home", "Work", "Others"].map((item) => (
+//             <TouchableOpacity
+//               key={item}
+//               style={[styles.saveAsBtn, label === item && styles.selectedSaveAsBtn]}
+//               onPress={() => {
+//                 setLabel(item);
+//                 if (item === "Others") setCustomLabel("");
+//               }}
+//             >
+//               <Text style={[styles.saveAsText, label === item && styles.selectedSaveAsText]}>
+//                 {item}
+//               </Text>
+//             </TouchableOpacity>
+//           ))}
+//         </View>
+
+//         {label === "Others" && (
+//           <TextInput
+//             placeholder="Save As"
+//             value={customLabel}
+//             onChangeText={setCustomLabel}
+//             style={styles.input}
+//           />
+//         )}
+
+//         <TextInput
+//           placeholder="Receiver Phone*"
+//           value={receiverPhone}
+//           onChangeText={setReceiverPhone}
+//           keyboardType="phone-pad"
+//           style={styles.input}
+//         />
+
+//         <TouchableOpacity style={styles.saveBtn} onPress={handleSaveOrUpdateAddress}>
+//           <Text style={styles.saveBtnText}>{isEditMode ? "Update Address" : "Save Address"}</Text>
+//         </TouchableOpacity>
+//       </ScrollView>
+//     </View>
+//   );
+// }
+
+// const styles = StyleSheet.create({
+//   container: { flex: 1, backgroundColor: "#fff" },
+//   mapContainer: { width, height: height * 0.55 },
+//   markerFixed: {
+//     position: "absolute",
+//     top: "50%",
+//     left: "50%",
+//     marginLeft: -20,
+//     marginTop: -40,
+//   },
+//   formContainer: { flex: 1, paddingHorizontal: 15, paddingTop: 10 },
+//   locationTitle: { fontSize: 16, fontWeight: "600", marginBottom: 15 },
+//   input: {
+//     borderWidth: 1,
+//     borderColor: "#ccc",
+//     borderRadius: 8,
+//     padding: 12,
+//     marginBottom: 10,
+//   },
+//   saveAsContainer: {
+//     flexDirection: "row",
+//     justifyContent: "space-between",
+//     marginBottom: 10,
+//   },
+//   saveAsBtn: {
+//     flex: 1,
+//     padding: 10,
+//     borderWidth: 1,
+//     borderColor: "#ccc",
+//     marginHorizontal: 3,
+//     borderRadius: 8,
+//   },
+//   selectedSaveAsBtn: { backgroundColor: "purple", borderColor: "purple" },
+//   saveAsText: { textAlign: "center", color: "#555" },
+//   selectedSaveAsText: { color: "#fff" },
+//   saveBtn: {
+//     backgroundColor: "purple",
+//     padding: 15,
+//     borderRadius: 10,
+//     marginTop: 15,
+//   },
+//   saveBtnText: { color: "#fff", textAlign: "center", fontWeight: "bold", fontSize: 16 },
+//   loader: { flex: 1, justifyContent: "center", alignItems: "center" },
+// });
+
+
 import React, { useEffect, useState, useRef, useCallback, useContext } from "react";
 import {
   View,
   Text,
   TextInput,
-  FlatList,
-  TouchableOpacity,
-  Dimensions,
-  ActivityIndicator,
-  Keyboard,
-  Animated,
-  Easing,
-  Image,
   ScrollView,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
   Alert,
   StyleSheet,
+  Dimensions,
 } from "react-native";
 import MapView, { Region } from "react-native-maps";
-import * as Location from "expo-location";
 import axios from "axios";
 import debounce from "lodash.debounce";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { AuthContext } from "@/context/Auth";
+import { LocationContext } from "@/context/locationContent";
 
 const { width, height } = Dimensions.get("window");
-const GOOGLE_API_KEY = "AIzaSyDbhDt1_GZG_bW-3f5s6cfSTY2CepE4GEg"; // replace with your key
+const GOOGLE_API_KEY = "AIzaSyDbhDt1_GZG_bW-3f5s6cfSTY2CepE4GEg";
 
-interface PlacePrediction {
-  description: string;
-  place_id: string;
-}
-
-export default function AddressAndOrderScreen() {
+export default function AddNewAddress() {
   const mapRef = useRef<MapView>(null);
   const router = useRouter();
   const params = useLocalSearchParams();
   const { user } = useContext(AuthContext);
+  const { addLocation } = useContext(LocationContext);
 
-  // Cart data (optional)
-  const cartItems = params.cart ? JSON.parse(params.cart as string) : [];
-  const totalPrice = params.totalPrice || "0";
-
-  // Map & location
   const [region, setRegion] = useState<Region | null>(null);
-  const [currentAddress, setCurrentAddress] = useState<string>("");
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [places, setPlaces] = useState<PlacePrediction[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [currentAddress, setCurrentAddress] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  // Form
-  const [house, setHouse] = useState("");
-  const [apartment, setApartment] = useState("");
+  const [houseFlatBlock, setHouseFlatBlock] = useState("");
+  const [apartmentRoadArea, setApartmentRoadArea] = useState("");
   const [floor, setFloor] = useState("");
   const [label, setLabel] = useState("");
   const [receiverPhone, setReceiverPhone] = useState("");
+  const [customLabel, setCustomLabel] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [mapLocked, setMapLocked] = useState(false);
 
-  const bottomCardHeight = useRef(new Animated.Value(150)).current;
+  const isEditMode = Array.isArray(params.edit)
+    ? params.edit[0] === "true"
+    : params.edit === "true";
+
+  const getParamString = (param: string | string[] | undefined) =>
+    Array.isArray(param) ? param[0] : param || "";
 
   useEffect(() => {
-    if (params.lat && params.lng && params.address) {
-      const selectedRegion: Region = {
-        latitude: parseFloat(params.lat as string),
-        longitude: parseFloat(params.lng as string),
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      };
-      setRegion(selectedRegion);
-      setCurrentAddress(params.address as string);
-      setSearchQuery(params.address as string);
-      setLoading(false);
-    } else fetchCurrentLocation();
-  }, []);
+    const paramHouseFlatBlock = getParamString(params.houseFlatBlock);
+    const paramFloor = getParamString(params.floor);
+    const paramApartmentRoadArea = getParamString(params.apartmentRoadArea);
+    const paramLabel = getParamString(params.label);
+    const paramCustomLabel = getParamString(params.customAddressLabel);
+    const paramPhone = getParamString(params.phone);
+    const paramLat = getParamString(params.lat);
+    const paramLng = getParamString(params.lng);
+    const paramAddress = getParamString(params.address);
+    const paramFullAddress = getParamString(params.fullAddress);
 
-  const fetchCurrentLocation = async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        alert("Enable location permissions!");
-        setLoading(false);
-        return;
-      }
-      const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Highest });
-      const initialRegion: Region = {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
+    setHouseFlatBlock(paramHouseFlatBlock);
+    setFloor(paramFloor);
+    setApartmentRoadArea(paramApartmentRoadArea);
+
+    if (paramPhone) setReceiverPhone(paramPhone);
+
+    if (["Home", "Work"].includes(paramLabel)) {
+      setLabel(paramLabel);
+    } else if (paramLabel === "Others" || paramCustomLabel) {
+      setLabel("Others");
+      setCustomLabel(paramCustomLabel || "");
+    }
+
+    if (paramLat && paramLng) {
+      setRegion({
+        latitude: parseFloat(paramLat),
+        longitude: parseFloat(paramLng),
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
-      };
-      setRegion(initialRegion);
-      fetchAddressFromCoords(location.coords.latitude, location.coords.longitude);
-    } catch (e) {
-      console.log(e);
-      setLoading(false);
+      });
     }
-  };
+
+    if (paramAddress || paramFullAddress) {
+      setCurrentAddress(paramAddress || paramFullAddress || "");
+      setSearchQuery(paramAddress || paramFullAddress || "");
+    }
+
+    setShowForm(true);
+    setMapLocked(isEditMode);
+    setLoading(false);
+  }, []);
 
   const fetchAddressFromCoords = useCallback(
     debounce(async (lat: number, lng: number) => {
@@ -102,134 +427,94 @@ export default function AddressAndOrderScreen() {
           `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_API_KEY}`
         );
         const addr = res.data?.results?.[0]?.formatted_address;
-        if (addr) {
-          setCurrentAddress(addr);
-          setSearchQuery(addr);
-        }
+        if (addr) setCurrentAddress(addr);
       } catch (e) {
-        console.log(e);
-      } finally {
-        setLoading(false);
+        console.log("Geocode error:", e);
       }
     }, 500),
     []
   );
 
-  const animateBottomCard = (toValue: number) => {
-    Animated.timing(bottomCardHeight, {
-      toValue,
-      duration: 300,
-      easing: Easing.out(Easing.ease),
-      useNativeDriver: false,
-    }).start();
-  };
-
-  const searchPlaces = async (text: string) => {
-    setSearchQuery(text);
-    animateBottomCard(350);
-    if (!region || text.length < 2) return setPlaces([]);
-    try {
-      const res = await axios.get(
-        `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${text}&key=${GOOGLE_API_KEY}&location=${region.latitude},${region.longitude}&radius=2000`
-      );
-      setPlaces(res.data.predictions || []);
-    } catch (e) {
-      console.log(e);
-    }
-  };
-
-  const selectPlace = async (placeId: string, description: string) => {
-    setSearchQuery(description);
-    setPlaces([]);
-    Keyboard.dismiss();
-    animateBottomCard(150);
-
-    try {
-      const res = await axios.get(
-        `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&key=${GOOGLE_API_KEY}`
-      );
-      const loc = res.data?.result?.geometry?.location;
-      const addr = res.data?.result?.formatted_address;
-      if (loc && addr && mapRef.current) {
-        const newRegion: Region = {
-          latitude: loc.lat,
-          longitude: loc.lng,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        };
-        setRegion(newRegion);
-        mapRef.current.animateToRegion(newRegion, 500);
-        setCurrentAddress(addr);
-      }
-    } catch (e) {
-      console.log(e);
-    }
-  };
-
   const handleRegionChangeComplete = (newRegion: Region) => {
-    setRegion(newRegion);
-    fetchAddressFromCoords(newRegion.latitude, newRegion.longitude);
+    if (!mapLocked) {
+      setRegion(newRegion);
+      fetchAddressFromCoords(newRegion.latitude, newRegion.longitude);
+    }
   };
 
-  const handleConfirm = () => {
-    if (!region) return;
-    setShowForm(true);
-  };
-
-  // ✅ Unified single button
-  const handleEnterAddress = async () => {
-    if (!house) {
-      Alert.alert("Missing Details", "Please enter House / Flat / Block No.!");
+  const handleSaveOrUpdateAddress = async () => {
+    if (!houseFlatBlock || !apartmentRoadArea) {
+      Alert.alert("Missing Details", "Please fill all mandatory fields!");
+      return;
+    }
+    if (!receiverPhone || !/^[6-9]\d{9}$/.test(receiverPhone)) {
+      Alert.alert("Invalid Phone", "Enter a valid 10-digit phone number.");
+      return;
+    }
+    if (label === "Others" && !customLabel) {
+      Alert.alert("Missing Details", "Please enter a label name!");
       return;
     }
     if (!user) {
       Alert.alert("Login Required", "You must be logged in!");
       return;
     }
+    if (!region) {
+      Alert.alert("Error", "Location not detected. Please try again.");
+      return;
+    }
 
     const addressData = {
-      userId: user.customerId,
       fullAddress: currentAddress,
-      house,
-      apartment,
+      houseFlatBlock,
       floor,
-      label,
-      receiverPhone,
-      lat: region?.latitude,
-      lng: region?.longitude,
+      apartmentRoadArea,
+      latitude: region.latitude,
+      longitude: region.longitude,
+      addressType: label === "Others" ? "OTHER" : label.toUpperCase(),
+      customAddressLabel: label === "Others" ? customLabel : "",
+      phone: receiverPhone,
     };
 
     try {
-      if (cartItems.length > 0) {
-        // Checkout: create order
-        const orderPayload = {
-          userId: user.customerId,
-          cartItems,
-          totalPrice,
-          address: addressData,
-          orderDate: new Date(),
-        };
-        const res = await axios.post("http://192.168.0.105:5000/create-order", orderPayload);
-        if (res.data.success) {
-          Alert.alert("✅ Order Placed", "Your order was successful!", [{ text: "OK", onPress: () => router.push("/") }]);
-          setHouse(""); setApartment(""); setFloor(""); setLabel(""); setReceiverPhone("");
-        } else {
-          Alert.alert("❌ Failed", "Unable to place order. Try again.");
-        }
+      let res;
+      if (isEditMode && params.addressId) {
+        res = await axios.put(
+          `http://192.168.0.102:9094/customers/address/${getParamString(params.addressId)}`,
+          addressData,
+          { headers: { Authorization: `Bearer ${user.token}` } }
+        );
       } else {
-        // New address only
-        const res = await axios.post("http://192.168.0.105:5000/save-address", addressData);
-        if (res.data.success) {
-          Alert.alert("✅ Address Saved", "Your address has been saved!", [{ text: "OK", onPress: () => router.push("/") }]);
-          setHouse(""); setApartment(""); setFloor(""); setLabel(""); setReceiverPhone("");
-        } else if (res.data.duplicate) {
-          Alert.alert("⚠️ Duplicate Address", "This address is already saved.");
-        } else {
-          Alert.alert("❌ Failed", "Unable to save address. Try again.");
-        }
+        res = await axios.post(
+          "http://192.168.0.102:9094/customers/address",
+          addressData,
+          { headers: { Authorization: `Bearer ${user.token}` } }
+        );
+      }
+
+      if (res.status >= 200 && res.status < 300) {
+        // ✅ Update LocationContext with saved: true
+        addLocation({
+          address: currentAddress,
+          lat: region.latitude,
+          lng: region.longitude,
+          saved: true,
+          houseFlatBlock,
+          floor,
+          apartmentRoadArea,
+          label,
+          customAddressLabel: label === "Others" ? customLabel : "",
+          phone: receiverPhone,
+        });
+
+        Alert.alert(
+          "✅ Success",
+          isEditMode ? "Address updated successfully!" : "Address saved successfully!",
+          [{ text: "OK", onPress: () => router.push("/") }]
+        );
       }
     } catch (err) {
-      console.log("Error:", err);
+      console.log("Save Address Error:", err);
       Alert.alert("Error", "Something went wrong! Please try again later.");
     }
   };
@@ -245,149 +530,132 @@ export default function AddressAndOrderScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Search */}
-      <TextInput
-        style={styles.searchInput}
-        placeholder="Search for a place"
-        value={searchQuery}
-        onFocus={() => animateBottomCard(350)}
-        onChangeText={searchPlaces}
-      />
-      {places.length > 0 && (
-        <FlatList
-          style={styles.placesList}
-          data={places}
-          keyExtractor={(item) => item.place_id}
-          keyboardShouldPersistTaps="handled"
-          renderItem={({ item }) => (
-            <TouchableOpacity style={styles.placeItem} onPress={() => selectPlace(item.place_id, item.description)}>
-              <Text style={styles.placeText}>{item.description}</Text>
-            </TouchableOpacity>
-          )}
-        />
-      )}
-
       {/* Map */}
-      <MapView
-        ref={mapRef}
-        style={[styles.map, { height: showForm ? 300 : height }]}
-        initialRegion={region}
-        onRegionChangeComplete={handleRegionChangeComplete}
-        showsUserLocation
-      />
-      <View style={[styles.markerFixed, { top: (showForm ? 300 : height) / 2 - 30 }]}>
-        <Image
-          source={{ uri: "https://maps.gstatic.com/mapfiles/api-3/images/spotlight-poi2_hdpi.png" }}
-          style={{ width: 50, height: 50 }}
-          resizeMode="contain"
+      <View style={[styles.mapContainer, showForm && { height: height * 0.4 }]}>
+        <MapView
+          ref={mapRef}
+          style={StyleSheet.absoluteFillObject}
+          region={region}
+          scrollEnabled={!mapLocked}
+          zoomEnabled={!mapLocked}
+          onRegionChangeComplete={handleRegionChangeComplete}
+          showsUserLocation
         />
+        {!mapLocked && (
+          <View style={styles.markerFixed}>
+            <Image
+              source={{
+                uri: "https://maps.gstatic.com/mapfiles/api-3/images/spotlight-poi2_hdpi.png",
+              }}
+              style={{ width: 40, height: 40 }}
+              resizeMode="contain"
+            />
+          </View>
+        )}
       </View>
 
-      {/* Bottom Card */}
-      {!showForm && (
-        <Animated.View style={[styles.bottomCard, { height: bottomCardHeight }]}>
-          <Text style={styles.currentLocationText}>Selected Location</Text>
-          <Text style={styles.addressText}>{currentAddress}</Text>
-          <TouchableOpacity style={styles.confirmBtn} onPress={handleConfirm}>
-            <Text style={styles.confirmText}>Confirm & Proceed</Text>
-          </TouchableOpacity>
-        </Animated.View>
-      )}
-
       {/* Form */}
-      {showForm && (
-        <ScrollView style={styles.addressForm} showsVerticalScrollIndicator={false}>
-          <Text style={styles.locationTitle}>{currentAddress}</Text>
+      <ScrollView style={styles.formContainer} contentContainerStyle={{ paddingBottom: 40 }}>
+        <Text style={styles.locationTitle}>{currentAddress}</Text>
 
-          <TextInput placeholder="House / Flat / Block No.*" value={house} onChangeText={setHouse} style={styles.input} />
-          <TextInput placeholder="Floor" value={floor} onChangeText={setFloor} style={styles.input} />
-          <TextInput placeholder="Apartment / Road / Area*" value={apartment} onChangeText={setApartment} style={styles.input} />
+        <TextInput
+          placeholder="House / Flat / Block No.*"
+          value={houseFlatBlock}
+          onChangeText={setHouseFlatBlock}
+          style={styles.input}
+        />
+        <TextInput placeholder="Floor" value={floor} onChangeText={setFloor} style={styles.input} />
+        <TextInput
+          placeholder="Apartment / Road / Area*"
+          value={apartmentRoadArea}
+          onChangeText={setApartmentRoadArea}
+          style={styles.input}
+        />
 
-          <View style={styles.saveAsContainer}>
-            {["Home", "Work", "Others"].map((item) => (
-              <TouchableOpacity
-                key={item}
-                style={[styles.saveAsBtn, label === item && styles.selectedSaveAsBtn]}
-                onPress={() => setLabel(item)}
-              >
-                <Text style={[styles.saveAsText, label === item && styles.selectedSaveAsText]}>{item}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+        {/* Save As */}
+        <View style={styles.saveAsContainer}>
+          {["Home", "Work", "Others"].map((item) => (
+            <TouchableOpacity
+              key={item}
+              style={[styles.saveAsBtn, label === item && styles.selectedSaveAsBtn]}
+              onPress={() => {
+                setLabel(item);
+                if (item === "Others") setCustomLabel("");
+              }}
+            >
+              <Text style={[styles.saveAsText, label === item && styles.selectedSaveAsText]}>
+                {item}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-          {label && (
-            <TextInput
-              placeholder="Receiver Phone Number"
-              value={receiverPhone}
-              onChangeText={setReceiverPhone}
-              keyboardType="phone-pad"
-              style={styles.input}
-            />
-          )}
+        {label === "Others" && (
+          <TextInput
+            placeholder="Save As"
+            value={customLabel}
+            onChangeText={setCustomLabel}
+            style={styles.input}
+          />
+        )}
 
-          {/* ✅ Single Button */}
-          <TouchableOpacity style={styles.saveBtn} onPress={handleEnterAddress}>
-            <Text style={styles.saveBtnText}>Enter House / Flat / Block</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      )}
+        <TextInput
+          placeholder="Receiver Phone*"
+          value={receiverPhone}
+          onChangeText={setReceiverPhone}
+          keyboardType="phone-pad"
+          style={styles.input}
+        />
+
+        <TouchableOpacity style={styles.saveBtn} onPress={handleSaveOrUpdateAddress}>
+          <Text style={styles.saveBtnText}>{isEditMode ? "Update Address" : "Save Address"}</Text>
+        </TouchableOpacity>
+      </ScrollView>
     </View>
   );
 }
 
-// Styles (unchanged)
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
-  loader: { flex: 1, justifyContent: "center", alignItems: "center" },
-  searchInput: {
+  mapContainer: { width, height: height * 0.55 },
+  markerFixed: {
     position: "absolute",
-    top: 40,
-    left: 20,
-    right: 20,
-    zIndex: 10,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+    top: "50%",
+    left: "50%",
+    marginLeft: -20,
+    marginTop: -40,
   },
-  placesList: { position: "absolute", top: 100, left: 20, right: 20, maxHeight: 200, zIndex: 10, backgroundColor: "#fff", borderRadius: 10 },
-  placeItem: { padding: 10, borderBottomWidth: 0.5, borderBottomColor: "#ccc" },
-  placeText: { fontSize: 16 },
-  map: { flex: 1 },
-  markerFixed: { position: "absolute", left: width / 2 - 25, zIndex: 5 },
-  bottomCard: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 15,
-    borderTopRightRadius: 15,
-    padding: 15,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 5,
+  formContainer: { flex: 1, paddingHorizontal: 15, paddingTop: 10 },
+  locationTitle: { fontSize: 16, fontWeight: "600", marginBottom: 15 },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 10,
   },
-  currentLocationText: { fontSize: 16, fontWeight: "bold", marginBottom: 5 },
-  addressText: { fontSize: 14, color: "#555", marginBottom: 10 },
-  confirmBtn: { backgroundColor: "purple", padding: 10, borderRadius: 8, alignItems: "center" },
-  confirmText: { color: "#fff", fontWeight: "bold" },
-  addressForm: { flex: 1, padding: 20 },
-  locationTitle: { fontSize: 16, fontWeight: "bold", marginBottom: 15 },
-  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 10, marginBottom: 10 },
-  saveAsContainer: { flexDirection: "row", marginVertical: 10, justifyContent: "space-around" },
-  saveAsBtn: { padding: 10, borderWidth: 1, borderColor: "#ccc", borderRadius: 8 },
+  saveAsContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  saveAsBtn: {
+    flex: 1,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    marginHorizontal: 3,
+    borderRadius: 8,
+  },
   selectedSaveAsBtn: { backgroundColor: "purple", borderColor: "purple" },
-  saveAsText: { color: "#000" },
+  saveAsText: { textAlign: "center", color: "#555" },
   selectedSaveAsText: { color: "#fff" },
-  saveBtn: { backgroundColor: "purple", padding: 12, borderRadius: 8, alignItems: "center", marginTop: 20 },
-  saveBtnText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
+  saveBtn: {
+    backgroundColor: "purple",
+    padding: 15,
+    borderRadius: 10,
+    marginTop: 15,
+  },
+  saveBtnText: { color: "#fff", textAlign: "center", fontWeight: "bold", fontSize: 16 },
+  loader: { flex: 1, justifyContent: "center", alignItems: "center" },
 });
- 
